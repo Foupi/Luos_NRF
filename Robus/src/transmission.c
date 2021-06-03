@@ -117,9 +117,11 @@ void Transmit_Process()
                 }
             }
         }
+        header_t msg_header = ((msg_t*)data)->header;
+        bool ack_required = ((msg_header.target_mode == IDACK) || (msg_header.target_mode == NODEIDACK)) && ((!localhost) || (msg_header.target == DEFAULTID));
         // Check if we will need an ACK for this message and compute the transmit status we will need to manage it
         transmitStatus_t initial_transmit_status = TX_OK;
-        if (((((msg_t *)data)->header.target_mode == IDACK) || (((msg_t *)data)->header.target_mode == NODEIDACK)) && (!localhost || (((msg_t *)data)->header.target == DEFAULTID)))
+        if (ack_required)
         {
             // We will need to validate the good reception of the ack.
             // Switch the tx status as TX_NOK allowing to detect a default at the next Timeout if no ACK have been received.
@@ -141,6 +143,11 @@ void Transmit_Process()
             ctx.tx.data = data;
             // Transmit data
             LuosHAL_ComTransmit(data, size);
+            if (!ack_required)
+            {
+                LuosHAL_ResetTimeout(0);
+                Recep_Timeout();
+            }
         }
     }
 }
@@ -151,12 +158,19 @@ void Transmit_Process()
  ******************************************************************************/
 static uint8_t Transmit_GetLockStatus(void)
 {
+    if (LUOS_COM == DISABLE)
+        return false;
+
     if (ctx.tx.lock != true)
     {
         ctx.tx.lock |= LuosHAL_GetTxLockState();
     }
     return ctx.tx.lock;
 }
+
+// Timeout for ACK reception.
+static const uint32_t   TRANSMISSION_RETRY_DELAY    = 50;
+
 /******************************************************************************
  * @brief finish transmit and try to launch a new one
  * @param None
@@ -177,7 +191,7 @@ void Transmit_End(void)
         // A tx_task failed
         nbrRetry++;
         // compute a delay before retry
-        LuosHAL_ResetTimeout(20 * nbrRetry * (ctx.node.node_id + 1));
+        LuosHAL_ResetTimeout(TRANSMISSION_RETRY_DELAY * nbrRetry * (ctx.node.node_id + 1));
         // Lock the trasmission to be sure no one can send something from this node.
         ctx.tx.lock   = true;
         ctx.tx.status = TX_DISABLE;

@@ -16,6 +16,10 @@
 #include "msg_alloc.h"
 #include "luos_utils.h"
 
+#ifdef DEBUG
+#include "nrf_log.h"
+#endif
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -277,6 +281,10 @@ static error_return_t Robus_ResetNetworkDetection(ll_container_t *ll_container)
 
     return FAILED;
 }
+
+// Timeout for branch detection in milliseconds.
+static const uint32_t   PTP_BRANCH_DETECTION_TIMEOUT    = 8000;
+static const uint32_t   PTP_BRANCH_DETECTION_REFRESH    = 100;
 /******************************************************************************
  * @brief run the procedure allowing to detect the next nodes on the next port
  * @param ll_container pointer to the detecting ll_container
@@ -317,8 +325,17 @@ static error_return_t Robus_DetectNextNodes(ll_container_t *ll_container)
         while (ctx.port.keepLine)
         {
             Robus_Loop();
-            if (LuosHAL_GetSystick() - start_tick > 1000)
+
+            // Wait to avoid spamming.
+            uint32_t curr_tick = LuosHAL_GetSystick();
+            while ((LuosHAL_GetSystick() - curr_tick) < PTP_BRANCH_DETECTION_REFRESH);
+
+            if (LuosHAL_GetSystick() - start_tick > PTP_BRANCH_DETECTION_TIMEOUT)
             {
+                #ifdef DEBUG
+                NRF_LOG_INFO("Topology detection timeout!");
+                #endif /* DEBUG */
+
                 // topology detection is too long, we should abort it and restart
                 return FAILED;
             }

@@ -232,7 +232,7 @@ static error_return_t Luos_MsgHandler(container_t *container, msg_t *input)
                 case 0:
                     // send back a local routing table
                     output_msg.header.cmd         = RTB_CMD;
-                    output_msg.header.target_mode = IDACK;
+                    output_msg.header.target_mode = ID;
                     output_msg.header.target      = input->header.source;
                     Luos_TransmitLocalRoutingTable(container, &output_msg);
                     break;

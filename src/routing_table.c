@@ -12,6 +12,10 @@
 #include "luos_hal.h"
 #include "context.h"
 
+#ifdef DEBUG
+#include "nrf_log.h"
+#endif /* DEBUG */
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -343,6 +347,10 @@ static void RoutingTB_AddNumToAlias(char *alias, uint8_t num)
     // Add a number at the end of the alias
     sprintf(alias, "%s%d", alias, num);
 }
+
+// Timeout for RoutingTB_WaitRoutingTable in milliseconds.
+static const uint32_t ROUTING_TB_WAIT_TIMEOUT   = 2000;
+
 /******************************************************************************
  * @brief time out to receive en route table from
  * @param container receive
@@ -351,11 +359,10 @@ static void RoutingTB_AddNumToAlias(char *alias, uint8_t num)
  ******************************************************************************/
 static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
 {
-    const uint8_t timeout    = 15; // timeout in ms
     const uint16_t entry_bkp = last_routing_table_entry;
     Luos_SendMsg(container, intro_msg);
     uint32_t timestamp = LuosHAL_GetSystick();
-    while ((LuosHAL_GetSystick() - timestamp) < timeout)
+    while ((LuosHAL_GetSystick() - timestamp) < ROUTING_TB_WAIT_TIMEOUT)
     {
         // If this request is for a container in this board allow him to respond.
         Luos_Loop();
@@ -366,6 +373,10 @@ static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
     }
     return false;
 }
+
+// Refresh rate between calls to RoutingTB_WaitRoutingTable.
+static const uint32_t   ROUTING_TB_GEN_REFRESH  = 300;
+
 /******************************************************************************
  * @brief Generate Complete route table with local route table receive
  * @param container in node
@@ -398,6 +409,9 @@ static void RoutingTB_Generate(container_t *container, uint16_t nb_node)
             break;
         }
         last_node_id = RoutingTB_BigestNodeID();
+
+        uint32_t start_tick = LuosHAL_GetSystick();
+        while ((LuosHAL_GetSystick() - start_tick) < ROUTING_TB_GEN_REFRESH);
     }
     // Check Alias duplication.
     uint16_t nb_mod = RoutingTB_BigestID();
@@ -435,7 +449,7 @@ static void RoutingTB_Share(container_t *container, uint16_t nb_node)
     // send route table to each nodes. Routing tables are commonly usable for each containers of a node.
     msg_t intro_msg;
     intro_msg.header.cmd         = RTB_CMD;
-    intro_msg.header.target_mode = NODEIDACK;
+    intro_msg.header.target_mode = NODEID;
 
     for (uint16_t i = 2; i <= nb_node; i++) //don't send to ourself
     {
@@ -455,6 +469,11 @@ void RoutingTB_DetectContainers(container_t *container)
 {
     // Starts the topology detection.
     uint16_t nb_node = Robus_TopologyDetection(container->ll_container);
+
+    #ifdef DEBUG
+    NRF_LOG_INFO("Nb nodes: %u!", nb_node);
+    #endif /* DEBUG */
+
     // clear the routing table.
     RoutingTB_Erase();
     // Generate the routing_table

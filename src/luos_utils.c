@@ -35,6 +35,9 @@ __attribute__((weak)) void node_assert(char *file, uint32_t line)
  ******************************************************************************/
 void Luos_assert(char *file, uint32_t line)
 {
+    // First of all, log.
+    node_assert(file, line);
+
     // prepare a message as a node.
     // To do that we have to reset the container ID and clear PTP states to unlock others.
     PortMng_Init();
@@ -49,7 +52,6 @@ void Luos_assert(char *file, uint32_t line)
     memcpy(&msg.data[sizeof(line)], file, strlen(file));
     while (Luos_SendMsg(0, &msg) != SUCCEED)
         ;
-    node_assert(file, line);
     // wait for the transmission to finish before killing IRQ
     while (MsgAlloc_TxAllComplete() == FAILED)
         ;

@@ -362,7 +362,7 @@ static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
     const uint16_t entry_bkp = last_routing_table_entry;
     Luos_SendMsg(container, intro_msg);
     uint32_t timestamp = LuosHAL_GetSystick();
-    while ((LuosHAL_GetSystick() - timestamp) < ROUTING_TB_WAIT_TIMEOUT)
+    while (true  /*(LuosHAL_GetSystick() - timestamp) < ROUTING_TB_WAIT_TIMEOUT*/)
     {
         // If this request is for a container in this board allow him to respond.
         Luos_Loop();
@@ -371,6 +371,9 @@ static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
             return true;
         }
     }
+    #ifdef DEBUG
+    NRF_LOG_INFO("Routing table wait: timeout!");
+    #endif /* DEBUG */
     return false;
 }
 

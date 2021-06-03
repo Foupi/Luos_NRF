@@ -283,7 +283,7 @@ static error_return_t Robus_ResetNetworkDetection(ll_container_t *ll_container)
 }
 
 // Timeout for branch detection in milliseconds.
-static const uint32_t   PTP_BRANCH_DETECTION_TIMEOUT    = 8000;
+static const uint32_t   PTP_BRANCH_DETECTION_TIMEOUT    = 2000;
 static const uint32_t   PTP_BRANCH_DETECTION_REFRESH    = 100;
 /******************************************************************************
  * @brief run the procedure allowing to detect the next nodes on the next port
@@ -321,16 +321,42 @@ static error_return_t Robus_DetectNextNodes(ll_container_t *ll_container)
 
         // when Robus loop will receive the reply it will store and manage the new node_id and send it to the next node.
         // We just have to wait the end of the treatment of the entire branch
-        uint32_t start_tick = LuosHAL_GetSystick();
+        uint32_t timeout_ticks  = 0;
         while (ctx.port.keepLine)
         {
             Robus_Loop();
 
             // Wait to avoid spamming.
-            uint32_t curr_tick = LuosHAL_GetSystick();
-            while ((LuosHAL_GetSystick() - curr_tick) < PTP_BRANCH_DETECTION_REFRESH);
+            uint32_t curr_tick      = LuosHAL_GetSystick();
+            uint32_t refresh_ticks  = 0;
+            while (refresh_ticks < PTP_BRANCH_DETECTION_REFRESH)
+            {
+                uint32_t old_val = curr_tick;
+                curr_tick = LuosHAL_GetSystick();
+                if (curr_tick < old_val)
+                {
+                    // There was an overflow.
+                    uint32_t remaining;
+                    if (old_val >= MAX_SYSTICK_MS_VAL)
+                    {
+                        // Since MAX_SYSTICK_MS_VAL is not an exact value...
+                        remaining = 0;
+                    }
+                    else
+                    {
+                        remaining = MAX_SYSTICK_MS_VAL - old_val;
+                    }
+                    refresh_ticks += (remaining + curr_tick);
+                }
+                else
+                {
+                    refresh_ticks += (curr_tick - old_val);
+                }
+            }
 
-            if (LuosHAL_GetSystick() - start_tick > PTP_BRANCH_DETECTION_TIMEOUT)
+            timeout_ticks += refresh_ticks;
+
+            if (timeout_ticks > PTP_BRANCH_DETECTION_TIMEOUT)
             {
                 #ifdef DEBUG
                 NRF_LOG_INFO("Topology detection timeout!");
@@ -338,6 +364,28 @@ static error_return_t Robus_DetectNextNodes(ll_container_t *ll_container)
 
                 // topology detection is too long, we should abort it and restart
                 return FAILED;
+            }
+
+            uint32_t old_val = curr_tick;
+            curr_tick = LuosHAL_GetSystick();
+            if (curr_tick < old_val)
+            {
+                // There was an overflow.
+                uint32_t remaining;
+                if (old_val >= MAX_SYSTICK_MS_VAL)
+                {
+                    // Since MAX_SYSTICK_MS_VAL is not an exact value...
+                    remaining = 0;
+                }
+                else
+                {
+                    remaining = MAX_SYSTICK_MS_VAL - old_val;
+                }
+                timeout_ticks += (remaining + curr_tick);
+            }
+            else
+            {
+                timeout_ticks += (curr_tick - old_val);
             }
         }
     }

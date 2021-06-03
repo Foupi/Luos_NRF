@@ -49,6 +49,10 @@
 #include "luos_hal.h"
 #include "luos_utils.h"
 
+#ifdef DEBUG
+#include "nrf_log.h"
+#endif /* DEBUG */
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -987,6 +991,17 @@ error_return_t MsgAlloc_SetTxTask(ll_container_t *ll_container_pt, uint8_t *data
  ******************************************************************************/
 void MsgAlloc_PullMsgFromTxTask(void)
 {
+    #ifdef DEBUG
+    if (tx_tasks_stack_id == 0)
+    {
+        NRF_LOG_INFO("No TX task to remove!");
+    }
+    else if (tx_tasks_stack_id > MAX_MSG_NB)
+    {
+        NRF_LOG_INFO("Too many TX tasks: %u!", tx_tasks_stack_id);
+    }
+    #endif /* DEBUG */
+
     LUOS_ASSERT((tx_tasks_stack_id > 0) && (tx_tasks_stack_id <= MAX_MSG_NB));
 
     // Decay tasks

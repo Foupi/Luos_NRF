@@ -361,8 +361,10 @@ static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
 {
     const uint16_t entry_bkp = last_routing_table_entry;
     Luos_SendMsg(container, intro_msg);
-    uint32_t timestamp = LuosHAL_GetSystick();
-    while (true  /*(LuosHAL_GetSystick() - timestamp) < ROUTING_TB_WAIT_TIMEOUT*/)
+
+    uint32_t timestamp      = LuosHAL_GetSystick();
+    uint32_t waited_ticks   = 0;
+    while (waited_ticks < ROUTING_TB_WAIT_TIMEOUT)
     {
         // If this request is for a container in this board allow him to respond.
         Luos_Loop();
@@ -370,6 +372,29 @@ static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
         {
             return true;
         }
+
+        uint32_t old_val = timestamp;
+        timestamp = Luos_GetSystick();
+        if (timestamp < old_val)
+        {
+            // There was an overflow.
+            uint32_t remaining;
+            if (old_val >= MAX_SYSTICK_MS_VAL)
+            {
+                // Since MAX_SYSTICK_MS_VAL is not an exact value...
+                remaining = 0;
+            }
+            else
+            {
+                remaining = MAX_SYSTICK_MS_VAL - old_val;
+            }
+            waited_ticks += (remaining + timestamp);
+        }
+        else
+        {
+            waited_ticks += (timestamp - old_val);
+        }
+
     }
     #ifdef DEBUG
     NRF_LOG_INFO("Routing table wait: timeout!");
@@ -413,8 +438,32 @@ static void RoutingTB_Generate(container_t *container, uint16_t nb_node)
         }
         last_node_id = RoutingTB_BigestNodeID();
 
-        uint32_t start_tick = LuosHAL_GetSystick();
-        while ((LuosHAL_GetSystick() - start_tick) < ROUTING_TB_GEN_REFRESH);
+        uint32_t curr_tick = LuosHAL_GetSystick();
+        uint32_t waited_ticks = 0;
+        while (waited_ticks < ROUTING_TB_GEN_REFRESH)
+        {
+            uint32_t old_val = curr_tick;
+            curr_tick = Luos_GetSystick();
+            if (curr_tick < old_val)
+            {
+                // There was an overflow.
+                uint32_t remaining;
+                if (old_val >= MAX_SYSTICK_MS_VAL)
+                {
+                    // Since MAX_SYSTICK_MS_VAL is not an exact value...
+                    remaining = 0;
+                }
+                else
+                {
+                    remaining = MAX_SYSTICK_MS_VAL - old_val;
+                }
+                waited_ticks += (remaining + curr_tick);
+            }
+            else
+            {
+                waited_ticks += (curr_tick - old_val);
+            }
+        }
     }
     // Check Alias duplication.
     uint16_t nb_mod = RoutingTB_BigestID();

@@ -212,7 +212,7 @@ void Recep_GetCollision(volatile uint8_t *data)
         if (ctx.tx.status == TX_NOK)
         {
             // switch to catch Ack.
-            ctx.rx.callback = Recep_CatchAck;
+            Recep_CatchAck(data);
         }
         else
         {
@@ -272,6 +272,9 @@ void Recep_CatchAck(volatile uint8_t *data)
     status.unmap = *data;
     if ((!status.rx_error) && (status.identifier == 0x0F))
     {
+        #ifdef DEBUG
+        NRF_LOG_INFO("ACK received!");
+        #endif /* DEBUG */
         ctx.tx.status = TX_OK;
     }
     else

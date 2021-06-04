@@ -396,9 +396,11 @@ static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
         }
 
     }
+
     #ifdef DEBUG
     NRF_LOG_INFO("Routing table wait: timeout!");
     #endif /* DEBUG */
+
     return false;
 }
 

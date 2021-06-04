@@ -16,7 +16,7 @@
 
 #ifdef DEBUG
 #include "nrf_log.h"
-#endif
+#endif /* DEBUG */
 
 /*******************************************************************************
  * Definitions
@@ -75,15 +75,17 @@ void Recep_GetHeader(volatile uint8_t *data)
             break;
 
         case (sizeof(header_t)): //Process at the header
+
 #ifdef DEBUG
-            NRF_LOG_INFO("*******header data*******\n");
-            NRF_LOG_INFO("protocol : 0x%04x\n", current_msg->header.protocol);       /*!< Protocol version. */
-            NRF_LOG_INFO("target : 0x%04x\n", current_msg->header.target);           /*!< Target address, it can be (ID, Multicast/Broadcast, Type). */
-            NRF_LOG_INFO("target_mode : 0x%04x\n", current_msg->header.target_mode); /*!< Select targeting mode (ID, ID+ACK, Multicast/Broadcast, Type). */
-            NRF_LOG_INFO("source : 0x%04x\n", current_msg->header.source);           /*!< Source address, it can be (ID, Multicast/Broadcast, Type). */
-            NRF_LOG_INFO("cmd : 0x%04x\n", current_msg->header.cmd);                 /*!< msg definition. */
-            NRF_LOG_INFO("size : 0x%04x\n", current_msg->header.size);               /*!< Size of the data field. */
-#endif
+            NRF_LOG_INFO("*******header data*******");
+            NRF_LOG_INFO("protocol : 0x%04x", current_msg->header.protocol);        /*!< Protocol version. */
+            NRF_LOG_INFO("target : 0x%04x", current_msg->header.target);            /*!< Target address, it can be (ID, Multicast/Broadcast, Type). */
+            NRF_LOG_INFO("target_mode : 0x%04x", current_msg->header.target_mode);  /*!< Select targeting mode (ID, ID+ACK, Multicast/Broadcast, Type). */
+            NRF_LOG_INFO("source : 0x%04x", current_msg->header.source);            /*!< Source address, it can be (ID, Multicast/Broadcast, Type). */
+            NRF_LOG_INFO("cmd : 0x%04x", current_msg->header.cmd);                  /*!< msg definition. */
+            NRF_LOG_INFO("size : 0x%04x", current_msg->header.size);                /*!< Size of the data field. */
+#endif /* DEBUG */
+
             // Reset the catcher.
             data_count = 0;
 
@@ -275,6 +277,7 @@ void Recep_CatchAck(volatile uint8_t *data)
         #ifdef DEBUG
         NRF_LOG_INFO("ACK received!");
         #endif /* DEBUG */
+
         ctx.tx.status = TX_OK;
     }
     else

@@ -18,7 +18,7 @@
 
 #ifdef DEBUG
 #include "nrf_log.h"
-#endif
+#endif /* DEBUG */
 
 /*******************************************************************************
  * Definitions

@@ -90,7 +90,9 @@ void Transmit_Process()
     uint16_t size;
     uint8_t localhost;
     ll_container_t *ll_container_pt;
-    if ((MsgAlloc_GetTxTask(&ll_container_pt, &data, &size, &localhost) == SUCCEED) && (Transmit_GetLockStatus() == false))
+    uint8_t get_tx_res = MsgAlloc_GetTxTask(&ll_container_pt, &data,
+                                            &size, &localhost);
+    if ((get_tx_res == SUCCEED) && (Transmit_GetLockStatus() == false))
     {
         // We have something to send
         // Check if we already try to send it multiple times and save it on stats if it is
@@ -113,6 +115,7 @@ void Transmit_Process()
                 if (MsgAlloc_GetTxTask(&ll_container_pt, &data, &size, &localhost) == FAILED)
                 {
                     // Nothing to transmit anymore, just exit.
+
                     return;
                 }
             }
@@ -140,6 +143,7 @@ void Transmit_Process()
             LuosHAL_SetIrqState(true);
             ctx.tx.data = data;
             // Transmit data
+
             LuosHAL_ComTransmit(data, size);
         }
     }
@@ -151,6 +155,11 @@ void Transmit_Process()
  ******************************************************************************/
 static uint8_t Transmit_GetLockStatus(void)
 {
+    if (LUOS_COM == DISABLE)
+    {
+        return false;
+    }
+
     if (ctx.tx.lock != true)
     {
         ctx.tx.lock |= LuosHAL_GetTxLockState();

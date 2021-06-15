@@ -11,6 +11,10 @@
 #include "robus.h"
 #include "luos_hal.h"
 
+#ifdef DEBUG
+#include "nrf_log.h"
+#endif /* DEBUG */
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -512,6 +516,29 @@ container_t *Luos_CreateContainer(CONT_CB cont_cb, uint8_t type, const char *ali
 
     container_number++;
     return container;
+}
+/******************************************************************************
+ * @brief Destroys the given container.
+ * @param The container to destroy.
+ * @return None.
+ ******************************************************************************/
+void Luos_DestroyContainer(container_t* container)
+{
+    // Get container index in the table.
+    uint16_t container_index = Luos_GetContainerIndex(container);
+
+    #ifdef DEBUG
+    NRF_LOG_INFO("Container to destroy is located at index %u!",
+                 container_index);
+    #endif /* DEBUG */
+
+    // Store remote address.
+    ll_container_t* ll_container = container->ll_container;
+
+    // FIXME Destroy LL container.
+
+    // FIXME Perform a -1 offset on all the table from found index.
+    // FIXME Decrease container table size.
 }
 /******************************************************************************
  * @brief Send msg through network

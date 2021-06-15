@@ -12,6 +12,10 @@
 #include "luos_hal.h"
 #include "context.h"
 
+#ifdef DEBUG
+#include "nrf_log.h"
+#endif /* DEBUG */
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -304,6 +308,7 @@ void RoutingTB_ComputeRoutingTableEntryNB(void)
         if (routing_table[i].mode == CLEAR)
         {
             last_routing_table_entry = i;
+
             return;
         }
     }
@@ -379,6 +384,7 @@ static void RoutingTB_Generate(container_t *container, uint16_t nb_node)
     uint16_t last_node_id = RoutingTB_BigestNodeID();
     uint16_t last_cont_id = 0;
     msg_t intro_msg;
+
     while ((last_node_id < nb_node) && (try_nb < nb_node))
     {
         try_nb++;
@@ -393,12 +399,22 @@ static void RoutingTB_Generate(container_t *container, uint16_t nb_node)
         // Ask to introduce and wait for a reply
         if (!RoutingTB_WaitRoutingTable(container, &intro_msg))
         {
+            #ifdef DEBUG
+            NRF_LOG_INFO("Introduction message sent to node %u was not answered!",
+                         last_node_id + 1);
+            #endif /* DEBUG */
+
             // We don't get the answer
             nb_node = last_node_id;
             break;
         }
         last_node_id = RoutingTB_BigestNodeID();
     }
+
+    #ifdef DEBUG
+    NRF_LOG_INFO("Intro message sent to every node!");
+    #endif /* DEBUG */
+
     // Check Alias duplication.
     uint16_t nb_mod = RoutingTB_BigestID();
     for (uint16_t id = 1; id <= nb_mod; id++)
@@ -455,10 +471,13 @@ void RoutingTB_DetectContainers(container_t *container)
 {
     // Starts the topology detection.
     uint16_t nb_node = Robus_TopologyDetection(container->ll_container);
+
     // clear the routing table.
     RoutingTB_Erase();
+
     // Generate the routing_table
     RoutingTB_Generate(container, nb_node);
+
     // We have a complete routing table now share it with others.
     RoutingTB_Share(container, nb_node);
 }

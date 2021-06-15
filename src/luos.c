@@ -71,6 +71,7 @@ void Luos_Loop(void)
         luos_stats.max_loop_time_ms = LuosHAL_GetSystick() - last_loop_date;
     }
     Robus_Loop();
+
     // look at all received messages
     while (MsgAlloc_LookAtLuosTask(remaining_msg_number, &oldest_ll_container) != FAILED)
     {
@@ -82,8 +83,13 @@ void Luos_Loop(void)
         // There is a possibility to receive in IT a restet_detection so check task before doing any treatement
         if ((MsgAlloc_GetLuosTaskCmd(remaining_msg_number, &cmd) != SUCCEED) || (MsgAlloc_GetLuosTaskSize(remaining_msg_number, &size) != SUCCEED))
         {
+            #ifdef DEBUG
+            NRF_LOG_INFO("Failed to get CMD or size in the message!");
+            #endif /* DEBUG */
+
             break;
         }
+
         //check if this msg cmd should be consumed by Luos_MsgHandler
         if (Luos_IsALuosCmd(container, cmd, size) == SUCCEED)
         {
@@ -104,6 +110,12 @@ void Luos_Loop(void)
                     container->cont_cb(container, returned_msg);
                 }
             }
+            #ifdef DEBUG
+            else
+            {
+                NRF_LOG_INFO("Could not pull message from Luos tasks!");
+            }
+            #endif /* DEBUG */
         }
         else
         {
@@ -241,8 +253,13 @@ static error_return_t Luos_MsgHandler(container_t *container, msg_t *input)
                     Luos_TransmitLocalRoutingTable(container, &output_msg);
                     break;
                 default:
+                {
                     // Check routing table overflow
-                    LUOS_ASSERT(((uint32_t)route_tab + input->header.size) <= ((uint32_t)RoutingTB_Get() + (sizeof(routing_table_t) * MAX_RTB_ENTRY)));
+                    uint32_t max_rtb_addr = (uint32_t)RoutingTB_Get() + (MAX_RTB_ENTRY * sizeof(routing_table_t));
+                    uint32_t next_rtb_end = (uint32_t)route_tab + input->header.size;
+
+                    LUOS_ASSERT(next_rtb_end <= max_rtb_addr);
+                }
                     if (Luos_ReceiveData(container, input, (void *)route_tab) == SUCCEED)
                     {
                         // route table section reception complete
@@ -697,6 +714,7 @@ error_return_t Luos_ReceiveData(container_t *container, msg_t *msg, void *bin_da
     static uint32_t total_data_size[MAX_CONTAINER_NUMBER] = {0};
     static uint16_t last_msg_size                         = 0;
     uint16_t id                                           = Luos_GetContainerIndex(container);
+
     // check good container index
     if (id == 0xFFFF)
     {
@@ -714,6 +732,10 @@ error_return_t Luos_ReceiveData(container_t *container, msg_t *msg, void *bin_da
     // check message integrity
     if ((last_msg_size > 0) && (last_msg_size - MAX_DATA_MSG_SIZE > msg->header.size))
     {
+        #ifdef DEBUG
+        NRF_LOG_INFO("Fragmented data reception: a message was missed!");
+        #endif /* DEBUG */
+
         // we miss a message (a part of the data),
         // reset session and return an error.
         data_size[id] = 0;

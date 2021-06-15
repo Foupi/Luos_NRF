@@ -531,13 +531,16 @@ void Luos_DestroyContainer(container_t* container)
     // Get container index in the table.
     uint16_t container_index = Luos_GetContainerIndex(container);
 
-    #ifdef DEBUG
-    NRF_LOG_INFO("Container to destroy is located at index %u!",
-                 container_index);
-    #endif /* DEBUG */
-
-    // FIXME Perform a -1 offset on all the table from found index.
-    // FIXME Decrease container table size.
+    // Index of the last container is the number of containers - 1.
+    uint16_t last_container_index = container_number - 1;
+    for (uint16_t table_index = container_index;
+         table_index < last_container_index; table_index++)
+    {
+        container_t* curr_cont = container_table + table_index;
+        container_t* next_cont = curr_cont + 1;
+        memcpy(curr_cont, next_cont, sizeof(container_t));
+    }
+    container_number--;
 }
 /******************************************************************************
  * @brief Send msg through network

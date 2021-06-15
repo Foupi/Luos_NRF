@@ -138,13 +138,16 @@ void Robus_ContainerDestroy(ll_container_t* ll_container)
 {
     uint16_t ll_container_index = (uint16_t)(ll_container - ctx.ll_container_table);
 
-    #ifdef DEBUG
-    NRF_LOG_INFO("LL Container to destroy is located at index %u!",
-                 ll_container_index);
-    #endif /* DEBUG */
-
-    // FIXME Perform a -1 offset on all the table from found index.
-    // FIXME Decrease LL container table size.
+    // Index of the last LL container is the number of LL containers -1.
+    uint16_t last_ll_index = ctx.ll_container_number - 1;
+    for (uint16_t ll_table_index = ll_container_index;
+         ll_table_index < last_ll_index; ll_table_index++)
+    {
+        ll_container_t* curr_ll_cont = ctx.ll_container_table + ll_table_index;
+        ll_container_t* next_ll_cont = curr_ll_cont + 1;
+        memcpy(curr_ll_cont, next_ll_cont, sizeof(ll_container_t));
+    }
+    ctx.ll_container_number--;
 }
 /******************************************************************************
  * @brief clear container list in route table

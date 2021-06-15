@@ -16,6 +16,10 @@
 #include "msg_alloc.h"
 #include "luos_utils.h"
 
+#ifdef DEBUG
+#include "nrf_log.h"
+#endif /* DEBUG */
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -124,6 +128,23 @@ ll_container_t *Robus_ContainerCreate(uint16_t type)
     ctx.ll_container_table[ctx.ll_container_number].ll_stat.max_retry = 0;
     // Return the freshly initialized ll_container pointer.
     return (ll_container_t *)&ctx.ll_container_table[ctx.ll_container_number++];
+}
+/******************************************************************************
+ * @brief Destroys the given LL container.
+ * @param The LL container to destroy.
+ * @return None.
+ ******************************************************************************/
+void Robus_ContainerDestroy(ll_container_t* ll_container)
+{
+    uint16_t ll_container_index = (uint16_t)(ll_container - ctx.ll_container_table);
+
+    #ifdef DEBUG
+    NRF_LOG_INFO("LL Container to destroy is located at index %u!",
+                 ll_container_index);
+    #endif /* DEBUG */
+
+    // FIXME Perform a -1 offset on all the table from found index.
+    // FIXME Decrease LL container table size.
 }
 /******************************************************************************
  * @brief clear container list in route table

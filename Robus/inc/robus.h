@@ -23,6 +23,7 @@
 void Robus_Init(memory_stats_t *memory_stats);
 void Robus_Loop(void);
 ll_container_t *Robus_ContainerCreate(uint16_t type);
+void Robus_ContainerDestroy(ll_container_t* ll_container);
 void Robus_ContainersClear(void);
 error_return_t Robus_SendMsg(ll_container_t *ll_container, msg_t *msg);
 uint16_t Robus_TopologyDetection(ll_container_t *ll_container);

@@ -524,6 +524,10 @@ container_t *Luos_CreateContainer(CONT_CB cont_cb, uint8_t type, const char *ali
  ******************************************************************************/
 void Luos_DestroyContainer(container_t* container)
 {
+    // Destroy LL container in remote table.
+    ll_container_t* ll_container = container->ll_container;
+    Robus_ContainerDestroy(ll_container);
+
     // Get container index in the table.
     uint16_t container_index = Luos_GetContainerIndex(container);
 
@@ -531,11 +535,6 @@ void Luos_DestroyContainer(container_t* container)
     NRF_LOG_INFO("Container to destroy is located at index %u!",
                  container_index);
     #endif /* DEBUG */
-
-    // Store remote address.
-    ll_container_t* ll_container = container->ll_container;
-
-    // FIXME Destroy LL container.
 
     // FIXME Perform a -1 offset on all the table from found index.
     // FIXME Decrease container table size.

@@ -411,10 +411,6 @@ static void RoutingTB_Generate(container_t *container, uint16_t nb_node)
         last_node_id = RoutingTB_BigestNodeID();
     }
 
-    #ifdef DEBUG
-    NRF_LOG_INFO("Intro message sent to every node!");
-    #endif /* DEBUG */
-
     // Check Alias duplication.
     uint16_t nb_mod = RoutingTB_BigestID();
     for (uint16_t id = 1; id <= nb_mod; id++)

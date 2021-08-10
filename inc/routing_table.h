@@ -83,4 +83,7 @@ uint16_t RoutingTB_GetLastContainer(void);
 uint16_t *RoutingTB_GetLastNode(void);
 uint16_t RoutingTB_GetLastEntry(void);
 
+uint16_t RoutingTB_FindFutureContainerID(uint16_t current_id,
+                                         uint16_t self_id);
+
 #endif /* TABLE */

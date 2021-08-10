@@ -37,6 +37,10 @@ static bool RoutingTB_WaitRoutingTable(container_t *container, msg_t *intro_msg)
 static void RoutingTB_Generate(container_t *container, uint16_t nb_node);
 static void RoutingTB_Share(container_t *container, uint16_t nb_node);
 
+static uint16_t RoutingTB_FindNodeIDFromContainerID(uint16_t container_id);
+static uint16_t RoutingTB_FindFutureContainerIDSameNode(uint16_t container_id,
+                                                        uint16_t self_id);
+
 // ************************ routing_table search tools ***************************
 
 /******************************************************************************
@@ -583,4 +587,126 @@ uint16_t RoutingTB_GetLastContainer(void)
 uint16_t RoutingTB_GetLastEntry(void)
 {
     return (uint16_t)last_routing_table_entry;
+}
+/******************************************************************************
+ * @brief return the ID of the node hosting the given container ID.
+ * @param ID of container
+ * @return Node ID
+ ******************************************************************************/
+static uint16_t RoutingTB_FindNodeIDFromContainerID(uint16_t container_id)
+{
+    uint16_t node_id = 1;
+    uint16_t entry_idx = 1; // Index 0 is entry for Node 1.
+    while (entry_idx < last_routing_table_entry)
+    {
+        routing_table_t entry   = routing_table[entry_idx];
+
+        if (entry.mode == NODE)
+        {
+            node_id = entry.node_id;
+        }
+        else if (entry.mode == CONTAINER)
+        {
+            if (entry.id == container_id)
+            {
+                return node_id;
+            }
+        }
+        else
+        {
+            break;
+        }
+
+        entry_idx++;
+    }
+    // Not found.
+    return 0;
+}
+static uint16_t RoutingTB_FindFutureContainerIDSameNode(uint16_t container_id,
+                                                        uint16_t self_id)
+{
+    uint16_t            entry_idx       = 0;
+
+    // Find RTB entry index for local node.
+    while (entry_idx < last_routing_table_entry)
+    {
+        routing_table_t entry = routing_table[entry_idx];
+
+        if ((entry.mode == NODE) && (entry.node_id == ctx.node.node_id))
+        {
+            break;
+        }
+
+        entry_idx++;
+    }
+
+    uint16_t            node_idx       = entry_idx;
+    entry_idx++;
+
+    // Find RTB entry indexes for both containers.
+    uint16_t            container_idx  = 0;
+    uint16_t            self_idx       = 0;
+    while (entry_idx < last_routing_table_entry)
+    {
+        routing_table_t entry = routing_table[entry_idx];
+
+        if (entry.mode != CONTAINER)
+        {
+            break;
+        }
+
+        uint16_t node_relative_idx = entry_idx - node_idx;
+        if (entry.id == container_id)
+        {
+            container_idx   = node_relative_idx;
+        }
+        else if (entry.id == self_id)
+        {
+            self_idx        = node_relative_idx;
+        }
+
+        entry_idx++;
+    }
+
+    if (container_idx == 0)
+    {
+        // Container not found in node: error.
+        return 0;
+    }
+
+    if (self_idx > container_idx)
+    {
+        // If container ID 1 is not at index 1, then IDs start at 2.
+        return container_idx + 1;
+    }
+    return container_idx;
+}
+/******************************************************************************
+ * @brief Return the ID of the first container after the second has run a detection.
+ * @param Current ID of the container to compute
+ * @param ID of the container which will run a detection
+ * @return Future ID of the given container
+ ******************************************************************************/
+uint16_t RoutingTB_FindFutureContainerID(uint16_t current_id,
+                                         uint16_t self_id)
+{
+    if (current_id == self_id)
+    {
+        // Container runing the detection has ID 1.
+        return 1;
+    }
+
+    uint16_t    node_id = RoutingTB_FindNodeIDFromContainerID(current_id);
+    if (node_id == ctx.node.node_id)
+    {
+        // Container is located in this node.
+        return RoutingTB_FindFutureContainerIDSameNode(current_id,
+                                                       self_id);
+    }
+    else
+    {
+        // Container is located in a different node.
+        // FIXME Implement function.
+        return 0;
+    }
 }

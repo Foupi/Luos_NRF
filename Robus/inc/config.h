@@ -25,7 +25,7 @@
 #endif
 
 #ifndef MAX_CONTAINER_NUMBER
-#define MAX_CONTAINER_NUMBER 10
+#define MAX_CONTAINER_NUMBER 20
 #endif
 
 #ifndef MSG_BUFFER_SIZE
